@@ -1,0 +1,61 @@
+---
+- name: Intall Jenkins and other
+  hosts: webservers
+  gather_facts: false
+  become: yes
+  tasks:
+   - name: Install OpenJDK Java
+     apt:
+       name: openjdk-8-jdk
+       state: present  
+   - name: Creates directory
+     file:
+      path: /opt/tomcat
+      state: directory
+      owner: www-data
+      group: www-data
+      mode: 0775    
+   - name: Install Tomcat
+     become: yes 
+     get_url:
+       url: https://apache.volia.net/tomcat/tomcat-9/v9.0.46/bin/apache-tomcat-9.0.46.tar.gz
+       dest: /opt/tomcat/  
+   - name: extract tomcat packages
+     become: yes
+     unarchive:
+       src: /opt/tomcat/apache-tomcat-9.0.46.tar.gz
+       dest: /opt/tomcat/
+       remote_src: yes
+   - name: start tomcat services
+     become: yes
+     shell: nohup /opt/tomcat/apache-tomcat-9.0.46/bin/startup.sh
+     become: yes
+   - name: Install Maven using Ansible
+     become: yes
+     apt:
+       name: "{{ packages }}"
+       state: present
+     vars:
+       packages:
+           - maven
+   - name: ensure the jenkins apt repository key is installed
+     become: yes
+     apt_key: 
+       url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
+       state: present
+   - name: ensure the repository is configured
+     become: yes
+     apt_repository: 
+       repo: 'deb https://pkg.jenkins.io/debian-stable binary/'
+       state: present
+   - name: ensure jenkins is installed
+     become: yes
+     apt: 
+       name: jenkins 
+       update_cache: yes
+   - name: ensure jenkins is running
+     become: yes
+     service: 
+       name: jenkins 
+       state: started  
+  
